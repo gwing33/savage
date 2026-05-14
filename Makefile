@@ -7,6 +7,10 @@
 CYAN  := \033[0;36m
 RESET := \033[0m
 
+# Read INFLUX_TOKEN from .env (falls back to the default if .env doesn't exist yet).
+# This keeps flows_cred.json in sync with whatever token InfluxDB was initialised with.
+INFLUX_TOKEN := $(shell grep -m1 '^INFLUX_TOKEN=' .env 2>/dev/null | cut -d= -f2 | tr -d '"' || echo 'savage-influx-token')
+
 # ── dev ───────────────────────────────────────────────────────────────────────
 ## Start all services (builds images if needed). Seeds .env on first run.
 dev:
@@ -17,13 +21,23 @@ dev:
 	fi
 	@# Always sync settings.js into the data dir so config changes take effect.
 	@cp services/node-red/settings.js services/node-red/data/settings.js
-	@echo "$(CYAN)Synced settings.js → services/node-red/data/settings.js$(RESET)"
+	@echo "$(CYAN)Synced  settings.js   → services/node-red/data/$(RESET)"
 	@# Seed the starter flow only on a fresh data directory (Node-RED owns it after that).
 	@if [ ! -f services/node-red/data/flows.json ]; then \
 		cp services/node-red/flows.json services/node-red/data/flows.json; \
-		echo "$(CYAN)Seeded flows.json → services/node-red/data/flows.json$(RESET)"; \
+		echo "$(CYAN)Seeded  flows.json    → services/node-red/data/$(RESET)"; \
 	fi
+	@# Always regenerate flows_cred.json from the current INFLUX_TOKEN so the
+	@# credential file stays in sync with InfluxDB. credentialSecret:false in
+	@# settings.js tells Node-RED to read this file as plain JSON (no encryption).
+	@printf '{\n  "cfg-influxdb": { "token": "%s" }\n}\n' "$(INFLUX_TOKEN)" \
+		> services/node-red/data/flows_cred.json
+	@echo "$(CYAN)Generated flows_cred.json (token=$(INFLUX_TOKEN))$(RESET)"
 	docker compose up --build -d
+	@# Force-restart Node-RED so it re-reads settings.js and flows_cred.json.
+	@# `docker compose up` skips restart when only volume contents change.
+	@echo "$(CYAN)Restarting Node-RED to apply updated settings and credentials...$(RESET)"
+	@docker compose restart node-red
 	@echo ""
 	@echo "$(CYAN)  Services are starting up:$(RESET)"
 	@echo "  Node-RED   →  http://localhost:1880"

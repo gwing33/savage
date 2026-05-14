@@ -7,9 +7,10 @@
 # ── Service persistent data (generated at runtime, not source code) ───────────
 services/node-red/data/*
 !services/node-red/data/.gitkeep
-# settings.js and flows.json are seeded here by `make dev` — ignore the copies
+# settings.js, flows.json, and flows_cred.json are seeded by `make dev` — ignore the copies
 services/node-red/data/settings.js
 services/node-red/data/flows.json
+services/node-red/data/flows_cred.json
 services/influxdb/data/*
 !services/influxdb/data/.gitkeep
 services/grafana/data/*

@@ -71,6 +71,13 @@ module.exports = {
     ui: true,
   },
 
+  // ── Credentials ────────────────────────────────────────────────────────
+  // Set to false so Node-RED stores credentials as plain JSON in
+  // flows_cred.json rather than encrypting them with a random per-boot key.
+  // This lets `make dev` seed the credential file from a known template.
+  // In production, set this to a long random secret string instead.
+  credentialSecret: false,
+
   // ── Misc ───────────────────────────────────────────────────────────────
   exportGlobalContextKeys: false,
   externalModules: {
