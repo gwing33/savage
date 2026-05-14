@@ -1,0 +1,23 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Grafana Datasource Provisioning – InfluxDB v2 (Flux)
+#
+# Automatically configures the InfluxDB datasource on Grafana startup.
+# Credentials are read from environment variables set in docker-compose.yml.
+# ─────────────────────────────────────────────────────────────────────────────
+apiVersion: 1
+
+datasources:
+  - name: InfluxDB
+    type: influxdb
+    uid: influxdb
+    # "influxdb" resolves to the influxdb container on the savage-net network.
+    url: ${INFLUX_URL}
+    access: proxy
+    editable: true
+    jsonData:
+      version: Flux
+      organization: ${INFLUX_ORG}
+      defaultBucket: ${INFLUX_BUCKET}
+      tlsSkipVerify: true
+    secureJsonData:
+      token: ${INFLUX_TOKEN}

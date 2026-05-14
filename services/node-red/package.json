@@ -1,0 +1,10 @@
+{
+  "name": "savage-node-red",
+  "description": "Node-RED custom-node manifest for the savage Pi server",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "node-red-contrib-influxdb": "^0.6.0"
+  },
+  "notes": "This file documents which custom nodes are baked into the image via the Dockerfile RUN npm install step. To add more nodes, add them here and mirror the change in the Dockerfile."
+}
