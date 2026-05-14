@@ -10,11 +10,11 @@
 # ── Service persistent data (generated at runtime, not source code) ───────────
 services/node-red/data/*
 !services/node-red/data/.gitkeep
-# settings.js is seeded by `make dev` — ignore the copy in data/
+# settings.js and flows_cred.json are seeded by `make dev` — ignore the copies in data/
+# flows_cred.json contains the InfluxDB token — never commit it.
 services/node-red/data/settings.js
-# flows/ is version-controlled (Node-RED writes directly here).
-# flows_cred.json contains a token — never commit it.
-services/node-red/flows/flows_cred.json
+services/node-red/data/flows_cred.json
+# flows/ is version-controlled — Node-RED reads and writes flows.json directly here
 services/influxdb/data/*
 !services/influxdb/data/.gitkeep
 services/grafana/data/*

@@ -97,6 +97,9 @@ services:
       - ./services/node-red/flows:/flows
     environment:
       - TZ=${TZ:-UTC}
+      # Override the image default (FLOWS=flows.json). The entrypoint passes this
+      # as a CLI argument which takes precedence over flowFile in settings.js.
+      - FLOWS=/flows/flows.json
       # InfluxDB connection — consumed by settings.js functionGlobalContext
       - INFLUX_URL=${INFLUX_URL:-http://influxdb:8086}
       - INFLUX_TOKEN=${INFLUX_TOKEN:-savage-influx-token}
