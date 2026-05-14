@@ -12,8 +12,11 @@ module.exports = {
   // Matches the bind-mount in docker-compose.yml
   userDir: "/data",
 
-  // ── Flow file ──────────────────────────────────────────────────────────
-  flowFile: "flows.json",
+  // ── Flow file ────────────────────────────────────────────────────────
+  // Absolute path into the dedicated /flows bind-mount (see docker-compose.yml).
+  // Keeping flows outside /data means they survive `make clean` and can be
+  // committed to git. Node-RED also writes flows_cred.json alongside this file.
+  flowFile: "/flows/flows.json",
   flowFilePretty: true,
 
   // ── Logging ────────────────────────────────────────────────────────────

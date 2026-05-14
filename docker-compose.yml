@@ -89,9 +89,12 @@ services:
     ports:
       - "1880:1880" # Node-RED editor + HTTP-in nodes
     volumes:
-      # settings.js and flows.json are seeded into this directory by `make dev`
-      # before the container starts, avoiding macOS VirtioFS file-overlay issues.
+      # Ephemeral runtime data: context store, node configs, etc.
+      # Wiped by `make clean`; does NOT contain the flow file.
       - ./services/node-red/data:/data
+      # Flow file lives here — version-controlled, never wiped by `make clean`.
+      # Node-RED reads and writes flows.json (and flows_cred.json) directly here.
+      - ./services/node-red/flows:/flows
     environment:
       - TZ=${TZ:-UTC}
       # InfluxDB connection — consumed by settings.js functionGlobalContext
