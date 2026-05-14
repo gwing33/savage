@@ -1,0 +1,5 @@
+# Tell git to treat Node-RED flow files as JSON for cleaner diffs
+services/node-red/flows/*.json diff=json
+
+# Grafana dashboard JSON
+services/grafana/provisioning/dashboards/*.json diff=json

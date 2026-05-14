@@ -22,12 +22,12 @@ dev:
 	@# Always sync settings.js into the data dir so config changes take effect.
 	@cp services/node-red/settings.js services/node-red/data/settings.js
 	@echo "$(CYAN)Synced  settings.js   → services/node-red/data/$(RESET)"
-	@# Regenerate flows_cred.json alongside flows.json in the /flows mount.
-	@# Node-RED derives the cred filename from flowFile, so it must live in /flows/.
-	@# credentialSecret:false (settings.js) means this plain-JSON file is read as-is.
+	@# Regenerate flows_cred.json in /data (userDir) — Node-RED ALWAYS stores
+	@# credentials at path.join(userDir, basename(flowFile)+'_cred.json'),
+	@# regardless of where the flow file itself lives.
 	@printf '{\n  "cfg-influxdb": { "token": "%s" }\n}\n' "$(INFLUX_TOKEN)" \
-		> services/node-red/flows/flows_cred.json
-	@echo "$(CYAN)Generated flows/flows_cred.json (token=$(INFLUX_TOKEN))$(RESET)"
+		> services/node-red/data/flows_cred.json
+	@echo "$(CYAN)Generated data/flows_cred.json (token=$(INFLUX_TOKEN))$(RESET)"
 	docker compose up --build -d
 	@# Force-restart Node-RED so it re-reads settings.js and flows_cred.json.
 	@# `docker compose up` skips restart when only volume contents change.

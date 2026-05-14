@@ -1,0 +1,141 @@
+[
+  {
+    "id": "tab-sen66",
+    "type": "tab",
+    "label": "SEN66 → InfluxDB",
+    "disabled": false,
+    "info": "Subscribes to MQTT topic 'sen-66-data', parses the SEN66 sensor payload,\nand writes a measurement to InfluxDB as time-series data.\n\nExpected MQTT payload (JSON):\n{\n  \"pm1_0\": 2.3,\n  \"pm2_5\": 5.1,\n  \"pm4_0\": 6.2,\n  \"pm10_0\": 7.4,\n  \"humidity\": 55.2,\n  \"temperature\": 22.1,\n  \"voc_index\": 100,\n  \"nox_index\": 1,\n  \"co2\": 412\n}"
+  },
+
+  {
+    "id": "cfg-mqtt",
+    "type": "mqtt-broker",
+    "name": "Mosquitto (savage)",
+    "broker": "mosquitto",
+    "port": "1883",
+    "clientid": "node-red-savage",
+    "autoConnect": true,
+    "usetls": false,
+    "protocolVersion": "4",
+    "keepalive": "60",
+    "cleansession": true
+  },
+
+  {
+    "id": "cfg-influxdb",
+    "type": "influxdb",
+    "hostname": "influxdb",
+    "port": "8086",
+    "protocol": "http",
+    "database": "timeseries",
+    "name": "InfluxDB v2 (savage)",
+    "usetls": false,
+    "influxdbVersion": "2.0",
+    "url": "http://influxdb:8086",
+    "rejectUnauthorized": false,
+    "credentials": {
+      "token": "savage-influx-token"
+    }
+  },
+
+  {
+    "id": "node-mqtt-in",
+    "type": "mqtt in",
+    "z": "tab-sen66",
+    "name": "SEN66 data",
+    "topic": "sen-66-data",
+    "qos": "1",
+    "datatype": "json",
+    "broker": "cfg-mqtt",
+    "nl": false,
+    "rap": true,
+    "rh": 0,
+    "inputs": 0,
+    "x": 130,
+    "y": 160,
+    "wires": [["node-prepare-payload"]]
+  },
+
+  {
+    "id": "node-prepare-payload",
+    "type": "function",
+    "z": "tab-sen66",
+    "name": "Format for InfluxDB",
+    "func": "// The SEN66 sends physical values as floats (ALREADY_SCALED = true).\n// If your firmware sends raw Sensirion integers, set ALREADY_SCALED = false\n// and the scale factors below will be applied:\n//   PM:          ÷ 10  → µg/m³\n//   Humidity:    ÷ 100 → %RH\n//   Temperature: ÷ 200 → °C\n//   VOC/NOx:     ÷ 10  → Index\n//   CO2:         no scaling (already in ppm)\nconst ALREADY_SCALED = true;\n\nconst d = msg.payload;\n\nlet fields;\nif (ALREADY_SCALED) {\n    fields = {\n        pm1_0:       parseFloat(d.pm1_0)       || 0,\n        pm2_5:       parseFloat(d.pm2_5)       || 0,\n        pm4_0:       parseFloat(d.pm4_0)       || 0,\n        pm10_0:      parseFloat(d.pm10_0)      || 0,\n        humidity:    parseFloat(d.humidity)    || 0,\n        temperature: parseFloat(d.temperature) || 0,\n        voc_index:   parseFloat(d.voc_index)   || 0,\n        nox_index:   parseFloat(d.nox_index)   || 0,\n        co2:         parseFloat(d.co2)         || 0\n    };\n} else {\n    fields = {\n        pm1_0:       (d.pm1_0       || 0) / 10,\n        pm2_5:       (d.pm2_5       || 0) / 10,\n        pm4_0:       (d.pm4_0       || 0) / 10,\n        pm10_0:      (d.pm10_0      || 0) / 10,\n        humidity:    (d.humidity    || 0) / 100,\n        temperature: (d.temperature || 0) / 200,\n        voc_index:   (d.voc_index   || 0) / 10,\n        nox_index:   (d.nox_index   || 0) / 10,\n        co2:          d.co2          || 0\n    };\n}\n\n// InfluxDB line-protocol payload for node-red-contrib-influxdb\nmsg.payload = [\n    {\n        measurement: \"sen66\",\n        tags: {\n            // Add sensor location/ID tags here if you have multiple sensors.\n            // sensor_id: \"sensor-01\"\n        },\n        fields: fields\n        // timestamp is omitted → InfluxDB uses server time (recommended)\n    }\n];\n\nreturn msg;",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 350,
+    "y": 160,
+    "wires": [["node-influx-out", "node-debug-payload"]]
+  },
+
+  {
+    "id": "node-influx-out",
+    "type": "influxdb out",
+    "z": "tab-sen66",
+    "influxdb": "cfg-influxdb",
+    "name": "Write sen66 measurement",
+    "measurement": "sen66",
+    "precision": "ms",
+    "retentionPolicy": "",
+    "database": "timeseries",
+    "precisionV18FluxV20": "ms",
+    "retentionPolicyV18Flux": "",
+    "org": "savage",
+    "bucket": "timeseries",
+    "x": 610,
+    "y": 140,
+    "wires": [[]]
+  },
+
+  {
+    "id": "node-debug-payload",
+    "type": "debug",
+    "z": "tab-sen66",
+    "name": "InfluxDB payload",
+    "active": true,
+    "tosidebar": true,
+    "console": false,
+    "tostatus": false,
+    "complete": "payload",
+    "targetType": "msg",
+    "statusVal": "",
+    "statusType": "auto",
+    "x": 610,
+    "y": 200,
+    "wires": []
+  },
+
+  {
+    "id": "node-inject-test",
+    "type": "inject",
+    "z": "tab-sen66",
+    "name": "Inject test reading",
+    "props": [{ "p": "payload" }],
+    "repeat": "",
+    "crontab": "",
+    "once": false,
+    "onceDelay": 0.1,
+    "topic": "",
+    "payload": "{\"pm1_0\":2.3,\"pm2_5\":5.1,\"pm4_0\":6.2,\"pm10_0\":7.4,\"humidity\":55.2,\"temperature\":22.1,\"voc_index\":100,\"nox_index\":1,\"co2\":412}",
+    "payloadType": "json",
+    "x": 140,
+    "y": 260,
+    "wires": [["node-prepare-payload"]]
+  },
+
+  {
+    "id": "node-comment",
+    "type": "comment",
+    "z": "tab-sen66",
+    "name": "Click 'Inject test reading' to simulate a SEN66 MQTT message without real hardware",
+    "info": "",
+    "x": 310,
+    "y": 300,
+    "wires": []
+  }
+]
