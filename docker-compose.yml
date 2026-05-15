@@ -27,20 +27,20 @@ services:
       - ./services/mosquitto/config:/mosquitto/config:ro
       - ./services/mosquitto/data:/mosquitto/data
       - ./services/mosquitto/log:/mosquitto/log
+    environment:
+      # Exposed inside the container so the healthcheck (below) can authenticate.
+      # The credentials themselves are baked into /mosquitto/config/passwd by
+      # `make dev` using mosquitto_passwd.
+      - MQTT_USER=${MQTT_USER:?MQTT_USER not set — copy .env.example to .env}
+      - MQTT_PASS=${MQTT_PASS:?MQTT_PASS not set — copy .env.example to .env}
     networks:
       - savage-net
     healthcheck:
+      # CMD-SHELL form so $MQTT_USER / $MQTT_PASS expand inside the container.
       test:
         [
-          "CMD",
-          "mosquitto_pub",
-          "-h",
-          "localhost",
-          "-t",
-          "healthcheck",
-          "-m",
-          "ping",
-          "--quiet",
+          "CMD-SHELL",
+          'mosquitto_pub -h localhost -t healthcheck -m ping -u "$$MQTT_USER" -P "$$MQTT_PASS" --quiet',
         ]
       interval: 10s
       timeout: 5s
@@ -62,12 +62,12 @@ services:
       # One-time initialisation — ignored on subsequent starts once the
       # data directory is populated.
       - DOCKER_INFLUXDB_INIT_MODE=setup
-      - DOCKER_INFLUXDB_INIT_USERNAME=${INFLUX_USER:-admin}
-      - DOCKER_INFLUXDB_INIT_PASSWORD=${INFLUX_PASS:-changeme00}
-      - DOCKER_INFLUXDB_INIT_ORG=${INFLUX_ORG:-savage}
-      - DOCKER_INFLUXDB_INIT_BUCKET=${INFLUX_BUCKET:-timeseries}
+      - DOCKER_INFLUXDB_INIT_USERNAME=${INFLUX_USER:?INFLUX_USER not set — see .env.example}
+      - DOCKER_INFLUXDB_INIT_PASSWORD=${INFLUX_PASS:?INFLUX_PASS not set — see .env.example}
+      - DOCKER_INFLUXDB_INIT_ORG=${INFLUX_ORG:?INFLUX_ORG not set — see .env.example}
+      - DOCKER_INFLUXDB_INIT_BUCKET=${INFLUX_BUCKET:?INFLUX_BUCKET not set — see .env.example}
       # Static admin token – set once and reuse; required for Grafana + Node-RED
-      - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=${INFLUX_TOKEN:-savage-influx-token}
+      - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=${INFLUX_TOKEN:?INFLUX_TOKEN not set — see .env.example}
     networks:
       - savage-net
     healthcheck:
@@ -102,9 +102,9 @@ services:
       - FLOWS=/flows/flows.json
       # InfluxDB connection — consumed by settings.js functionGlobalContext
       - INFLUX_URL=${INFLUX_URL:-http://influxdb:8086}
-      - INFLUX_TOKEN=${INFLUX_TOKEN:-savage-influx-token}
-      - INFLUX_ORG=${INFLUX_ORG:-savage}
-      - INFLUX_BUCKET=${INFLUX_BUCKET:-timeseries}
+      - INFLUX_TOKEN=${INFLUX_TOKEN:?INFLUX_TOKEN not set — see .env.example}
+      - INFLUX_ORG=${INFLUX_ORG:?INFLUX_ORG not set — see .env.example}
+      - INFLUX_BUCKET=${INFLUX_BUCKET:?INFLUX_BUCKET not set — see .env.example}
     depends_on:
       mosquitto:
         condition: service_healthy
@@ -126,13 +126,13 @@ services:
       - ./services/grafana/provisioning:/etc/grafana/provisioning:ro
     environment:
       - TZ=${TZ:-UTC}
-      - GF_SECURITY_ADMIN_USER=${GRAFANA_USER:-admin}
-      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASS:-admin}
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_USER:?GRAFANA_USER not set — see .env.example}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASS:?GRAFANA_PASS not set — see .env.example}
       # InfluxDB credentials forwarded for datasource provisioning
       - INFLUX_URL=${INFLUX_URL:-http://influxdb:8086}
-      - INFLUX_TOKEN=${INFLUX_TOKEN:-savage-influx-token}
-      - INFLUX_ORG=${INFLUX_ORG:-savage}
-      - INFLUX_BUCKET=${INFLUX_BUCKET:-timeseries}
+      - INFLUX_TOKEN=${INFLUX_TOKEN:?INFLUX_TOKEN not set — see .env.example}
+      - INFLUX_ORG=${INFLUX_ORG:?INFLUX_ORG not set — see .env.example}
+      - INFLUX_BUCKET=${INFLUX_BUCKET:?INFLUX_BUCKET not set — see .env.example}
     depends_on:
       influxdb:
         condition: service_healthy
