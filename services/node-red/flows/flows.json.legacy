@@ -4,40 +4,14 @@
         "type": "tab",
         "label": "SEN66 → InfluxDB",
         "disabled": false,
-        "info": "Subscribes to MQTT topic 'sen-66-data', parses the SEN66 sensor payload,\nand writes a measurement to InfluxDB as time-series data.\n\nExpected MQTT payload (JSON):\n{\n  \"pm1_0\": 2.3,\n  \"pm2_5\": 5.1,\n  \"pm4_0\": 6.2,\n  \"pm10_0\": 7.4,\n  \"humidity\": 55.2,\n  \"temperature\": 22.1,\n  \"voc_index\": 100,\n  \"nox_index\": 1,\n  \"co2\": 412\n}"
-    },
-    {
-        "id": "cfg-mqtt",
-        "type": "mqtt-broker",
-        "name": "Mosquitto (savage)",
-        "broker": "mosquitto",
-        "port": "1883",
-        "clientid": "node-red-savage",
-        "autoConnect": true,
-        "usetls": false,
-        "protocolVersion": "4",
-        "keepalive": "60",
-        "cleansession": true
-    },
-    {
-        "id": "cfg-influxdb",
-        "type": "influxdb",
-        "hostname": "influxdb",
-        "port": "8086",
-        "protocol": "http",
-        "database": "timeseries",
-        "name": "InfluxDB v2 (savage)",
-        "usetls": false,
-        "influxdbVersion": "2.0",
-        "url": "http://influxdb:8086",
-        "rejectUnauthorized": false
+        "info": "Subscribes to MQTT topic 'sensors/venthood/intake/sen66', writes\nto the 'sen66' measurement in InfluxDB.\n\nExpected MQTT payload (JSON, current production format):\n{\n  \"pm1_0\": 0.1, \"pm2_5\": 0.2, \"pm4_0\": 0.3, \"pm10\": 0.4,\n  \"voc_index\": 46, \"nox_index\": 1,\n  \"co2_ppm\": 711,\n  \"temperature_c\": 26.47, \"humidity_rh\": 31.51,\n  \"device_id\": \"venthood-intake\"\n}\n\nNOTE: This is the current single-sensor flow. See flows.next.json for the\ngeneric multi-sensor / multi-position version that pairs with the new\nMQTT topic scheme: sensors/{project}/{position}/{device_id}/{sensor_type}"
     },
     {
         "id": "node-mqtt-in",
         "type": "mqtt in",
         "z": "tab-sen66",
         "name": "SEN66 data",
-        "topic": "sen-66-data",
+        "topic": "sensors/venthood/intake/sen66",
         "qos": "1",
         "datatype": "json",
         "broker": "cfg-mqtt",
@@ -104,7 +78,7 @@
         "once": false,
         "onceDelay": 0.1,
         "topic": "",
-        "payload": "{\"pm1_0\":2.3,\"pm2_5\":5.1,\"pm4_0\":6.2,\"pm10_0\":7.4,\"humidity\":55.2,\"temperature\":22.1,\"voc_index\":100,\"nox_index\":1,\"co2\":412}",
+        "payload": "{\"pm1_0\":0.1,\"pm2_5\":0.2,\"pm4_0\":0.3,\"pm10\":0.4,\"voc_index\":46,\"nox_index\":1,\"co2_ppm\":711,\"temperature_c\":26.47,\"humidity_rh\":31.51,\"device_id\":\"venthood-intake\"}",
         "payloadType": "json",
         "x": 140,
         "y": 260,
@@ -124,5 +98,39 @@
         "x": 310,
         "y": 300,
         "wires": []
+    },
+    {
+        "id": "cfg-mqtt",
+        "type": "mqtt-broker",
+        "name": "Mosquitto (savage)",
+        "broker": "mosquitto",
+        "port": "1883",
+        "clientid": "node-red-savage",
+        "autoConnect": true,
+        "usetls": false,
+        "protocolVersion": "4",
+        "keepalive": "60",
+        "cleansession": true
+    },
+    {
+        "id": "cfg-influxdb",
+        "type": "influxdb",
+        "hostname": "influxdb",
+        "port": "8086",
+        "protocol": "http",
+        "database": "timeseries",
+        "name": "InfluxDB v2 (savage)",
+        "usetls": false,
+        "influxdbVersion": "2.0",
+        "url": "http://influxdb:8086",
+        "rejectUnauthorized": false
+    },
+    {
+        "id": "7b06b65b6dbe66c8",
+        "type": "global-config",
+        "env": [],
+        "modules": {
+            "node-red-contrib-influxdb": "0.7.0"
+        }
     }
 ]
