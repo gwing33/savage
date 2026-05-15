@@ -3,10 +3,18 @@ apiVersion: 1
 providers:
   - name: savage
     orgId: 1
-    folder: "SEN66"
+    folder: "Vent Hood"
+    # Pin to the existing folder by UID so a future rename of `folder:` (or
+    # any pre-existing folder Grafana already created) doesn't cause the
+    # provisioner to spawn a parallel empty duplicate. UID is forever.
+    folderUid: dfm49owb7kpa8c
     type: file
     disableDeletion: false
     editable: true
+    # allowUiUpdates lets Grafana persist UI edits to provisioned dashboards
+    # back to the JSON file on disk. Without this, the dashboard reverts
+    # on every container restart and the "Save" button in the UI is disabled.
+    allowUiUpdates: true
     updateIntervalSeconds: 30
     options:
       path: /etc/grafana/provisioning/dashboards

@@ -1,0 +1,645 @@
+{
+  "annotations": { "list": [] },
+  "description": "Vent-hood IAQ. Trend charts above the fold; current-readings snapshot in a collapsible row below. Tag dimensions: project / position / device_id / fw. See hardware/SENSOR_PLATFORM.md.",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "refresh": "10s",
+  "schemaVersion": 39,
+  "tags": ["venthood", "iaq", "savage"],
+  "templating": {
+    "list": [
+      {
+        "name": "project",
+        "label": "Project",
+        "type": "query",
+        "datasource": { "type": "influxdb", "uid": "influxdb" },
+        "query": "import \"influxdata/influxdb/schema\"\nschema.tagValues(bucket: \"timeseries\", tag: \"project\")",
+        "refresh": 1,
+        "includeAll": false,
+        "multi": false,
+        "current": {
+          "selected": false,
+          "text": "venthood",
+          "value": "venthood"
+        }
+      },
+      {
+        "name": "position",
+        "label": "Position",
+        "type": "query",
+        "datasource": { "type": "influxdb", "uid": "influxdb" },
+        "query": "import \"influxdata/influxdb/schema\"\nschema.tagValues(bucket: \"timeseries\", tag: \"position\", predicate: (r) => r.project == \"${project}\")",
+        "refresh": 1,
+        "includeAll": true,
+        "multi": true,
+        "allValue": ".*"
+      },
+      {
+        "name": "device_id",
+        "label": "Device",
+        "type": "query",
+        "datasource": { "type": "influxdb", "uid": "influxdb" },
+        "query": "import \"influxdata/influxdb/schema\"\nschema.tagValues(bucket: \"timeseries\", tag: \"device_id\", predicate: (r) => r.project == \"${project}\")",
+        "refresh": 1,
+        "includeAll": true,
+        "multi": true,
+        "allValue": ".*"
+      }
+    ]
+  },
+  "time": { "from": "now-1h", "to": "now" },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "Vent Hood IAQ",
+  "uid": "venthood-iaq",
+  "version": 6,
+  "weekStart": "",
+
+  "panels": [
+    {
+      "id": 40,
+      "type": "timeseries",
+      "title": "CO₂",
+      "description": "Both sensor types overlaid. Persistent offset between SEN66 and SCD41 at the same position = drift.",
+      "datasource": { "type": "influxdb", "uid": "influxdb" },
+      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 0 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ppm",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 5,
+            "spanNulls": true,
+            "showPoints": "never"
+          },
+          "displayName": "${__field.labels.sensor} · ${__field.labels.device_id}"
+        }
+      },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom", "calcs": [] },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "influxdb", "uid": "influxdb" },
+          "query": "from(bucket: \"timeseries\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._field == \"co2_ppm\")\n  |> filter(fn: (r) => r.project == \"${project}\")\n  |> filter(fn: (r) => r.position =~ /${position:regex}/ and r.device_id =~ /${device_id:regex}/)\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> rename(columns: {_measurement: \"sensor\"})\n  |> keep(columns: [\"_time\", \"_value\", \"sensor\", \"device_id\"])\n  |> group(columns: [\"sensor\", \"device_id\"])"
+        }
+      ]
+    },
+
+    {
+      "id": 30,
+      "type": "timeseries",
+      "title": "PM size distribution",
+      "description": "PM1.0 / 2.5 / 4.0 / 10 overlaid per device. Spread between traces is itself diagnostic — coarse fractions filter out first. PM2.5 traces highlighted in bold purple as the headline health metric.",
+      "datasource": { "type": "influxdb", "uid": "influxdb" },
+      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 0 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "µg/m³",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 5,
+            "spanNulls": true,
+            "showPoints": "never",
+            "lineInterpolation": "smooth"
+          },
+          "displayName": "${__field.labels.metric} · ${__field.labels.device_id}"
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byRegexp", "options": "/.*pm2_5.*/" },
+            "properties": [
+              { "id": "custom.lineWidth", "value": 5 },
+              {
+                "id": "color",
+                "value": { "fixedColor": "purple", "mode": "fixed" }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom", "calcs": [] },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "influxdb", "uid": "influxdb" },
+          "query": "from(bucket: \"timeseries\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"sen66\")\n  |> filter(fn: (r) => r._field == \"pm1_0\" or r._field == \"pm2_5\" or r._field == \"pm4_0\" or r._field == \"pm10\")\n  |> filter(fn: (r) => r.project == \"${project}\")\n  |> filter(fn: (r) => r.position =~ /${position:regex}/ and r.device_id =~ /${device_id:regex}/)\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> rename(columns: {_field: \"metric\"})\n  |> keep(columns: [\"_time\", \"_value\", \"metric\", \"device_id\"])\n  |> group(columns: [\"metric\", \"device_id\"])"
+        }
+      ]
+    },
+
+    {
+      "id": 41,
+      "type": "timeseries",
+      "title": "Temperature",
+      "datasource": { "type": "influxdb", "uid": "influxdb" },
+      "gridPos": { "h": 6, "w": 4, "x": 0, "y": 9 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "celsius",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 5,
+            "spanNulls": true,
+            "showPoints": "never"
+          },
+          "displayName": "${__field.labels.sensor} · ${__field.labels.device_id}"
+        }
+      },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom", "calcs": [] },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "influxdb", "uid": "influxdb" },
+          "query": "from(bucket: \"timeseries\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._field == \"temperature_c\")\n  |> filter(fn: (r) => r.project == \"${project}\")\n  |> filter(fn: (r) => r.position =~ /${position:regex}/ and r.device_id =~ /${device_id:regex}/)\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> rename(columns: {_measurement: \"sensor\"})\n  |> keep(columns: [\"_time\", \"_value\", \"sensor\", \"device_id\"])\n  |> group(columns: [\"sensor\", \"device_id\"])"
+        }
+      ]
+    },
+
+    {
+      "id": 42,
+      "type": "timeseries",
+      "title": "Humidity",
+      "datasource": { "type": "influxdb", "uid": "influxdb" },
+      "gridPos": { "h": 6, "w": 4, "x": 4, "y": 9 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "humidity",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 5,
+            "spanNulls": true,
+            "showPoints": "never"
+          },
+          "displayName": "${__field.labels.sensor} · ${__field.labels.device_id}"
+        }
+      },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom", "calcs": [] },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "influxdb", "uid": "influxdb" },
+          "query": "from(bucket: \"timeseries\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._field == \"humidity_rh\")\n  |> filter(fn: (r) => r.project == \"${project}\")\n  |> filter(fn: (r) => r.position =~ /${position:regex}/ and r.device_id =~ /${device_id:regex}/)\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> rename(columns: {_measurement: \"sensor\"})\n  |> keep(columns: [\"_time\", \"_value\", \"sensor\", \"device_id\"])\n  |> group(columns: [\"sensor\", \"device_id\"])"
+        }
+      ]
+    },
+
+    {
+      "id": 50,
+      "type": "timeseries",
+      "title": "VOC index",
+      "datasource": { "type": "influxdb", "uid": "influxdb" },
+      "gridPos": { "h": 6, "w": 4, "x": 8, "y": 9 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 8,
+            "spanNulls": false,
+            "showPoints": "never",
+            "axisColorMode": "series"
+          },
+          "displayName": "${__field.labels.device_id}"
+        }
+      },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom", "calcs": [] },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "influxdb", "uid": "influxdb" },
+          "query": "from(bucket: \"timeseries\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"sen66\" and r._field == \"voc_index\")\n  |> filter(fn: (r) => r.project == \"${project}\")\n  |> filter(fn: (r) => r.position =~ /${position:regex}/ and r.device_id =~ /${device_id:regex}/)\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> keep(columns: [\"_time\", \"_value\", \"device_id\"])\n  |> group(columns: [\"device_id\"])"
+        }
+      ]
+    },
+
+    {
+      "id": 51,
+      "type": "timeseries",
+      "title": "NOx index",
+      "datasource": { "type": "influxdb", "uid": "influxdb" },
+      "gridPos": { "h": 6, "w": 4, "x": 12, "y": 9 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 8,
+            "spanNulls": true,
+            "showPoints": "never"
+          },
+          "displayName": "${__field.labels.device_id}"
+        }
+      },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom", "calcs": [] },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "influxdb", "uid": "influxdb" },
+          "query": "from(bucket: \"timeseries\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"sen66\" and r._field == \"nox_index\")\n  |> filter(fn: (r) => r.project == \"${project}\")\n  |> filter(fn: (r) => r.position =~ /${position:regex}/ and r.device_id =~ /${device_id:regex}/)\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> keep(columns: [\"_time\", \"_value\", \"device_id\"])\n  |> group(columns: [\"device_id\"])"
+        }
+      ]
+    },
+
+    {
+      "id": 60,
+      "type": "timeseries",
+      "title": "Pressure (BME280)",
+      "datasource": { "type": "influxdb", "uid": "influxdb" },
+      "gridPos": { "h": 6, "w": 8, "x": 16, "y": 9 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "pressurehpa",
+          "decimals": 1,
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 4,
+            "spanNulls": true,
+            "showPoints": "never"
+          },
+          "displayName": "${__field.labels.device_id}"
+        }
+      },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom", "calcs": [] },
+        "tooltip": { "mode": "single", "sort": "none" }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "influxdb", "uid": "influxdb" },
+          "query": "from(bucket: \"timeseries\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._field == \"pressure_hpa\")\n  |> filter(fn: (r) => r.project == \"${project}\")\n  |> filter(fn: (r) => r.position =~ /${position:regex}/ and r.device_id =~ /${device_id:regex}/)\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> keep(columns: [\"_time\", \"_value\", \"device_id\"])\n  |> group(columns: [\"device_id\"])"
+        }
+      ]
+    },
+
+    {
+      "id": 61,
+      "type": "table",
+      "title": "Devices — last seen",
+      "description": "One row per (device, sensor type). 'Last seen' > 30 s ago with a 5 s publish cadence = the device is probably offline. Use this table to look up which sensor sits behind each device column in the Snapshot table.",
+      "datasource": { "type": "influxdb", "uid": "influxdb" },
+      "gridPos": { "h": 6, "w": 12, "x": 0, "y": 15 },
+      "fieldConfig": {
+        "defaults": { "custom": { "align": "left" } },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "_time" },
+            "properties": [
+              { "id": "displayName", "value": "Last seen" },
+              { "id": "unit", "value": "dateTimeFromNow" }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "device_id" },
+            "properties": [{ "id": "displayName", "value": "Device" }]
+          },
+          {
+            "matcher": { "id": "byName", "options": "_measurement" },
+            "properties": [{ "id": "displayName", "value": "Sensor" }]
+          },
+          {
+            "matcher": { "id": "byName", "options": "position" },
+            "properties": [{ "id": "displayName", "value": "Position" }]
+          },
+          {
+            "matcher": { "id": "byName", "options": "fw" },
+            "properties": [{ "id": "displayName", "value": "FW" }]
+          }
+        ]
+      },
+      "options": { "showHeader": true, "cellHeight": "sm" },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "influxdb", "uid": "influxdb" },
+          "query": "from(bucket: \"timeseries\")\n  |> range(start: -1h)\n  |> filter(fn: (r) => r._field == \"uptime_s\")\n  |> filter(fn: (r) => r.project == \"${project}\")\n  |> last()\n  |> keep(columns: [\"_time\", \"_measurement\", \"device_id\", \"position\", \"fw\"])\n  |> group()\n  |> sort(columns: [\"position\", \"device_id\"])"
+        }
+      ]
+    },
+
+    {
+      "id": 700,
+      "type": "row",
+      "title": "Value table — per-device snapshot",
+      "collapsed": true,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 21 },
+      "panels": [
+        {
+          "id": 20,
+          "type": "table",
+          "title": "Snapshot — metric × device",
+          "description": "One row per metric, one column per device. Each cell is the latest value from whichever sensor that device runs (see Devices table above for the device → sensor mapping). Empty cell = device doesn't measure that quantity.",
+          "datasource": { "type": "influxdb", "uid": "influxdb" },
+          "gridPos": { "h": 18, "w": 24, "x": 0, "y": 22 },
+          "fieldConfig": {
+            "defaults": {
+              "custom": { "align": "auto", "cellOptions": { "type": "auto" } },
+              "color": { "mode": "thresholds" }
+            },
+            "overrides": [
+              {
+                "matcher": { "id": "byName", "options": "Metric" },
+                "properties": [{ "id": "custom.width", "value": 170 }]
+              },
+              {
+                "matcher": { "id": "byName", "options": "_sort" },
+                "properties": [{ "id": "custom.hidden", "value": true }]
+              }
+            ]
+          },
+          "options": {
+            "showHeader": true,
+            "cellHeight": "sm",
+            "footer": { "show": false }
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "datasource": { "type": "influxdb", "uid": "influxdb" },
+              "query": "import \"dict\"\n\nlabels = dict.fromList(pairs: [\n  {key: \"co2_ppm\",       value: \"CO\u2082 (ppm)\"},\n  {key: \"pm1_0\",         value: \"PM 1.0 (\u00b5g/m\u00b3)\"},\n  {key: \"pm2_5\",         value: \"PM 2.5 (\u00b5g/m\u00b3)\"},\n  {key: \"pm4_0\",         value: \"PM 4.0 (\u00b5g/m\u00b3)\"},\n  {key: \"pm10\",          value: \"PM 10 (\u00b5g/m\u00b3)\"},\n  {key: \"voc_index\",     value: \"VOC index\"},\n  {key: \"nox_index\",     value: \"NOx index\"},\n  {key: \"temperature_c\", value: \"Temperature (\u00b0C)\"},\n  {key: \"humidity_rh\",   value: \"Humidity (%RH)\"},\n  {key: \"pressure_hpa\",  value: \"Pressure (hPa)\"},\n])\n\nsortKey = dict.fromList(pairs: [\n  {key: \"co2_ppm\",       value: 1},\n  {key: \"pm1_0\",         value: 2},\n  {key: \"pm2_5\",         value: 3},\n  {key: \"pm4_0\",         value: 4},\n  {key: \"pm10\",          value: 5},\n  {key: \"voc_index\",     value: 6},\n  {key: \"nox_index\",     value: 7},\n  {key: \"temperature_c\", value: 8},\n  {key: \"humidity_rh\",   value: 9},\n  {key: \"pressure_hpa\",  value: 10},\n])\n\nfrom(bucket: \"timeseries\")\n  |> range(start: -5m)\n  |> filter(fn: (r) => r.project == \"${project}\")\n  |> filter(fn: (r) =>\n      r._field == \"co2_ppm\"       or r._field == \"pm1_0\"       or r._field == \"pm2_5\"\n      or r._field == \"pm4_0\"      or r._field == \"pm10\"\n      or r._field == \"voc_index\"  or r._field == \"nox_index\"\n      or r._field == \"temperature_c\" or r._field == \"humidity_rh\"\n      or r._field == \"pressure_hpa\")\n  |> filter(fn: (r) => r.position =~ /${position:regex}/ and r.device_id =~ /${device_id:regex}/)\n  |> last()\n  |> keep(columns: [\"_field\", \"_value\", \"device_id\"])\n  |> map(fn: (r) => ({\n      Metric: dict.get(dict: labels, key: r._field, default: r._field),\n      _sort:  dict.get(dict: sortKey, key: r._field, default: 99),\n      _value: r._value,\n      device_id: r.device_id,\n    }))\n  |> pivot(rowKey: [\"_sort\", \"Metric\"], columnKey: [\"device_id\"], valueColumn: \"_value\")\n  |> sort(columns: [\"_sort\"])"
+            }
+          ]
+        }
+      ]
+    },
+
+    {
+      "id": 800,
+      "type": "row",
+      "title": "Hero stats — current readings (collapsed by default)",
+      "collapsed": true,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 22 },
+      "panels": [
+        {
+          "id": 11,
+          "type": "stat",
+          "title": "CO₂",
+          "description": "Latest CO₂. ASHRAE comfort tiers (<800 / <1200 / <1500 ppm).",
+          "datasource": { "type": "influxdb", "uid": "influxdb" },
+          "gridPos": { "h": 4, "w": 5, "x": 0, "y": 23 },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "ppm",
+              "decimals": 0,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "green", "value": null },
+                  { "color": "yellow", "value": 800 },
+                  { "color": "orange", "value": 1200 },
+                  { "color": "red", "value": 1500 }
+                ]
+              }
+            }
+          },
+          "options": {
+            "colorMode": "background",
+            "graphMode": "none",
+            "textMode": "value",
+            "reduceOptions": {
+              "calcs": ["lastNotNull"],
+              "fields": "",
+              "values": false
+            }
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "datasource": { "type": "influxdb", "uid": "influxdb" },
+              "query": "from(bucket: \"timeseries\")\n  |> range(start: -5m)\n  |> filter(fn: (r) => r._field == \"co2_ppm\")\n  |> filter(fn: (r) => r.project == \"${project}\")\n  |> filter(fn: (r) => r.position =~ /${position:regex}/ and r.device_id =~ /${device_id:regex}/)\n  |> last() |> group() |> last()\n  |> keep(columns: [\"_time\", \"_value\"])"
+            }
+          ]
+        },
+        {
+          "id": 10,
+          "type": "stat",
+          "title": "PM2.5",
+          "description": "Latest PM2.5 across selected sensors. EPA AQI breakpoints (12/35/55 µg/m³).",
+          "datasource": { "type": "influxdb", "uid": "influxdb" },
+          "gridPos": { "h": 4, "w": 5, "x": 5, "y": 23 },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "µg/m³",
+              "decimals": 1,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "green", "value": null },
+                  { "color": "yellow", "value": 12 },
+                  { "color": "orange", "value": 35 },
+                  { "color": "red", "value": 55 }
+                ]
+              }
+            }
+          },
+          "options": {
+            "colorMode": "background",
+            "graphMode": "none",
+            "textMode": "value",
+            "reduceOptions": {
+              "calcs": ["lastNotNull"],
+              "fields": "",
+              "values": false
+            }
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "datasource": { "type": "influxdb", "uid": "influxdb" },
+              "query": "from(bucket: \"timeseries\")\n  |> range(start: -5m)\n  |> filter(fn: (r) => r._measurement == \"sen66\" and r._field == \"pm2_5\")\n  |> filter(fn: (r) => r.project == \"${project}\")\n  |> filter(fn: (r) => r.position =~ /${position:regex}/ and r.device_id =~ /${device_id:regex}/)\n  |> last() |> group() |> last()\n  |> keep(columns: [\"_time\", \"_value\"])"
+            }
+          ]
+        },
+        {
+          "id": 12,
+          "type": "stat",
+          "title": "VOC index",
+          "description": "Sensirion VOC index. 100 = recent baseline; higher = more volatiles.",
+          "datasource": { "type": "influxdb", "uid": "influxdb" },
+          "gridPos": { "h": 4, "w": 5, "x": 10, "y": 23 },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "decimals": 0,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "green", "value": null },
+                  { "color": "yellow", "value": 150 },
+                  { "color": "orange", "value": 250 },
+                  { "color": "red", "value": 350 }
+                ]
+              }
+            }
+          },
+          "options": {
+            "colorMode": "background",
+            "graphMode": "none",
+            "textMode": "value",
+            "reduceOptions": {
+              "calcs": ["lastNotNull"],
+              "fields": "",
+              "values": false
+            }
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "datasource": { "type": "influxdb", "uid": "influxdb" },
+              "query": "from(bucket: \"timeseries\")\n  |> range(start: -5m)\n  |> filter(fn: (r) => r._measurement == \"sen66\" and r._field == \"voc_index\")\n  |> filter(fn: (r) => r.project == \"${project}\")\n  |> filter(fn: (r) => r.position =~ /${position:regex}/ and r.device_id =~ /${device_id:regex}/)\n  |> last() |> group() |> last()\n  |> keep(columns: [\"_time\", \"_value\"])"
+            }
+          ]
+        },
+        {
+          "id": 13,
+          "type": "stat",
+          "title": "NOx index",
+          "description": "Sensirion NOx index. 1 = baseline; spikes = combustion events.",
+          "datasource": { "type": "influxdb", "uid": "influxdb" },
+          "gridPos": { "h": 4, "w": 5, "x": 15, "y": 23 },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "decimals": 0,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "green", "value": null },
+                  { "color": "yellow", "value": 5 },
+                  { "color": "orange", "value": 20 },
+                  { "color": "red", "value": 50 }
+                ]
+              }
+            }
+          },
+          "options": {
+            "colorMode": "background",
+            "graphMode": "none",
+            "textMode": "value",
+            "reduceOptions": {
+              "calcs": ["lastNotNull"],
+              "fields": "",
+              "values": false
+            }
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "datasource": { "type": "influxdb", "uid": "influxdb" },
+              "query": "from(bucket: \"timeseries\")\n  |> range(start: -5m)\n  |> filter(fn: (r) => r._measurement == \"sen66\" and r._field == \"nox_index\")\n  |> filter(fn: (r) => r.project == \"${project}\")\n  |> filter(fn: (r) => r.position =~ /${position:regex}/ and r.device_id =~ /${device_id:regex}/)\n  |> last() |> group() |> last()\n  |> keep(columns: [\"_time\", \"_value\"])"
+            }
+          ]
+        },
+        {
+          "id": 14,
+          "type": "stat",
+          "title": "Temperature",
+          "datasource": { "type": "influxdb", "uid": "influxdb" },
+          "gridPos": { "h": 4, "w": 5, "x": 0, "y": 27 },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "celsius",
+              "decimals": 1,
+              "color": { "mode": "thresholds" },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "blue", "value": null },
+                  { "color": "green", "value": 18 },
+                  { "color": "orange", "value": 26 },
+                  { "color": "red", "value": 32 }
+                ]
+              }
+            }
+          },
+          "options": {
+            "colorMode": "background",
+            "graphMode": "none",
+            "textMode": "value",
+            "reduceOptions": {
+              "calcs": ["mean"],
+              "fields": "",
+              "values": false
+            }
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "datasource": { "type": "influxdb", "uid": "influxdb" },
+              "query": "from(bucket: \"timeseries\")\n  |> range(start: -1m)\n  |> filter(fn: (r) => r._field == \"temperature_c\")\n  |> filter(fn: (r) => r.project == \"${project}\")\n  |> filter(fn: (r) => r.position =~ /${position:regex}/ and r.device_id =~ /${device_id:regex}/)\n  |> last()\n  |> keep(columns: [\"_time\", \"_value\"])"
+            }
+          ]
+        },
+        {
+          "id": 15,
+          "type": "stat",
+          "title": "Humidity",
+          "datasource": { "type": "influxdb", "uid": "influxdb" },
+          "gridPos": { "h": 4, "w": 5, "x": 5, "y": 27 },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "humidity",
+              "decimals": 0,
+              "color": { "mode": "thresholds" },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "orange", "value": null },
+                  { "color": "green", "value": 30 },
+                  { "color": "yellow", "value": 60 },
+                  { "color": "orange", "value": 70 }
+                ]
+              }
+            }
+          },
+          "options": {
+            "colorMode": "background",
+            "graphMode": "none",
+            "textMode": "value",
+            "reduceOptions": {
+              "calcs": ["mean"],
+              "fields": "",
+              "values": false
+            }
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "datasource": { "type": "influxdb", "uid": "influxdb" },
+              "query": "from(bucket: \"timeseries\")\n  |> range(start: -1m)\n  |> filter(fn: (r) => r._field == \"humidity_rh\")\n  |> filter(fn: (r) => r.project == \"${project}\")\n  |> filter(fn: (r) => r.position =~ /${position:regex}/ and r.device_id =~ /${device_id:regex}/)\n  |> last()\n  |> keep(columns: [\"_time\", \"_value\"])"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
