@@ -1,0 +1,9 @@
+# Local secrets — never commit
+config.py
+
+# OS / editor cruft
+.DS_Store
+*.swp
+*.swo
+__pycache__/
+*.pyc

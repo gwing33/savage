@@ -1,0 +1,36 @@
+# MicroPython config.py template — copy to config.py on the Pico, fill in
+# values. config.py is gitignored; never commit secrets.
+#
+# Per-device flashing checklist:
+#   1. Pick PROJECT / POSITION / DEVICE_ID below (see SENSOR_PLATFORM.md §1)
+#   2. Set WIFI_SSID / WIFI_PASSWORD for your network
+#   3. MQTT_USERNAME / MQTT_PASSWORD must match the savage stack's
+#      MQTT_USER / MQTT_PASS in .env (broker rejects anonymous connections).
+#
+# The MQTT topic is derived automatically at boot:
+#   sensors/{PROJECT}/{POSITION}/{DEVICE_ID}/scd41
+
+# --- WiFi --------------------------------------------------------------------
+WIFI_SSID = "your-wifi-ssid"
+WIFI_PASSWORD = "your-wifi-password"
+
+# --- MQTT broker -------------------------------------------------------------
+MQTT_BROKER = "savage.local"
+MQTT_PORT = 1883
+MQTT_USERNAME = "mqttuser"
+MQTT_PASSWORD = "mqttpass"
+
+# --- Identity (the four orthogonal dimensions — see SENSOR_PLATFORM.md §1) ---
+# PROJECT     : what this device is part of                ("venthood", "hvac", "room1")
+# POSITION    : where it sits in/on that project           ("intake", "exhaust", "ambient")
+# DEVICE_ID   : the physical board itself, stable, stickered ("pico-01")
+# (SENSOR_TYPE is fixed to "scd41" by main.py — don't override)
+PROJECT = "venthood"
+POSITION = "intake"
+DEVICE_ID = "pico-room"
+
+# --- Cadence -----------------------------------------------------------------
+# Seconds between MQTT publishes. SCD41 internally measures at 0.2 Hz (one new
+# value every ~5 s); 5 s here matches the SEN66 publisher's spec-default cadence.
+# Use 30 s for ambient / control-position devices.
+PUBLISH_INTERVAL_S = 5
