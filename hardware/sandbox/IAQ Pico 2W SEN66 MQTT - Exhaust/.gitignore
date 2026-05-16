@@ -1,6 +1,11 @@
 # Secrets — never commit
 settings.toml
 
+# CircuitPython libraries installed by circup — device-specific binaries,
+# not source code. Install on each Pico with:
+#   circup install adafruit_sen6x adafruit_minimqtt adafruit_connection_manager
+lib/
+
 # CircuitPython runtime artifacts (if you mount CIRCUITPY here)
 .fseventsd/
 .metadata_never_index
