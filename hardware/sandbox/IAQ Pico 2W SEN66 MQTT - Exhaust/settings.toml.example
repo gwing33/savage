@@ -1,0 +1,30 @@
+# CircuitPython settings.toml template — copy to settings.toml, fill in values.
+# settings.toml is gitignored; never commit secrets.
+#
+# This is the EXHAUST (post-filter) SEN66 deployment template. See the
+# intake folder's settings.toml.example for the field-by-field rationale
+# (the wiring, board, and library setup are identical). The only per-device
+# differences are POSITION + DEVICE_ID, called out below.
+
+# --- WiFi --------------------------------------------------------------------
+CIRCUITPY_WIFI_SSID = "your-wifi-ssid"
+CIRCUITPY_WIFI_PASSWORD = "your-wifi-password"
+
+# --- MQTT broker -------------------------------------------------------------
+MQTT_BROKER = "savage.local"
+MQTT_PORT = 1883
+MQTT_USERNAME = "mqttuser"
+MQTT_PASSWORD = "mqttpass"
+
+# --- Identity (the four orthogonal dimensions — see SENSOR_PLATFORM.md §1) ---
+# Position-specific defaults: this device sits POST-filter. The derived MQTT
+# topic at boot will be:
+#   sensors/venthood/exhaust/pico-exhaust/sen66
+PROJECT = "venthood"
+POSITION = "exhaust"
+DEVICE_ID = "pico-exhaust"
+
+# --- Cadence -----------------------------------------------------------------
+# 5 s active monitoring matches the intake device, so filter-efficiency
+# calculations in Grafana can align on matching time buckets.
+PUBLISH_INTERVAL_S = 5
