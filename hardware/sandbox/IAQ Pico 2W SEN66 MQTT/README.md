@@ -184,16 +184,25 @@ three lines in its `settings.toml`:
 
 ```toml
 PROJECT   = "venthood"
-POSITION  = "exhaust"   # or "ambient", "intake", etc.
-DEVICE_ID = "pico-02"   # stable hardware ID, stickered on the board
+POSITION  = "exhaust"        # or "ambient", "room", etc.
+DEVICE_ID = "pico-exhaust"   # stable hardware ID, stickered on the board
 ```
 
 The firmware derives the topic at boot:
-`sensors/venthood/exhaust/pico-02/sen66`. No code change needed.
+`sensors/venthood/exhaust/pico-exhaust/sen66`. No code change needed.
 
-A subscriber can then grab all of them with `sensors/venthood/+/+/sen66` and
-compute live filter efficiency as `(intake.pm2_5 - exhaust.pm2_5) /
-intake.pm2_5` (see `SENSOR_PLATFORM.md` §5.C for the dashboard pattern).
+**The exhaust deployment already exists** as its own folder:
+[`../IAQ Pico 2W SEN66 MQTT - Exhaust/`](../IAQ%20Pico%202W%20SEN66%20MQTT%20-%20Exhaust/). That folder contains a verbatim copy of
+this `code.py` plus an exhaust-flavoured `settings.toml.example`. The two
+folders being separate is a deployment-clarity choice, not a firmware-fork —
+when `code.py` changes here, mirror it there.
+
+A subscriber can grab all SEN66s on the hood with `sensors/venthood/+/+/sen66`
+and compute live filter efficiency as
+`(intake.pm2_5 - exhaust.pm2_5) / intake.pm2_5` (see `SENSOR_PLATFORM.md` §5.C
+for the dashboard pattern — the Vent Hood IAQ dashboard already has a
+Filter Efficiency stat that picks this up automatically once both devices are
+publishing).
 
 ## File map
 

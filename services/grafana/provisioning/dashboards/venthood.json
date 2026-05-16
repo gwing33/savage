@@ -347,6 +347,50 @@
     },
 
     {
+      "id": 70,
+      "type": "stat",
+      "title": "Filter efficiency — PM2.5",
+      "description": "(intake − exhaust) / intake · 100, computed on the last ~2 minutes of 30-second-aggregated PM2.5 from SEN66 at position=intake vs position=exhaust. Reads 'awaiting exhaust sensor' until both an intake and exhaust SEN66 are publishing concurrently. Green >80 % = filter doing its job; orange 30–60 % = noticeable loading or bypass; red <30 % = filter failing, bypassed, or exhaust momentarily exceeds intake (e.g., post-cooking when stale exhaust air clears more slowly than fresh intake).",
+      "datasource": { "type": "influxdb", "uid": "influxdb" },
+      "gridPos": { "h": 6, "w": 12, "x": 12, "y": 15 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "decimals": 0,
+          "min": 0,
+          "max": 100,
+          "noValue": "awaiting exhaust sensor",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "orange", "value": 30 },
+              { "color": "yellow", "value": 60 },
+              { "color": "green", "value": 80 }
+            ]
+          }
+        }
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "textMode": "auto",
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "fields": "",
+          "values": false
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "influxdb", "uid": "influxdb" },
+          "query": "intake = from(bucket: \"timeseries\")\n  |> range(start: -2m)\n  |> filter(fn: (r) => r._measurement == \"sen66\" and r._field == \"pm2_5\")\n  |> filter(fn: (r) => r.project == \"${project}\" and r.position == \"intake\")\n  |> aggregateWindow(every: 30s, fn: mean, createEmpty: false)\n  |> keep(columns: [\"_time\", \"_value\"])\n  |> rename(columns: {_value: \"intake\"})\n\nexhaust = from(bucket: \"timeseries\")\n  |> range(start: -2m)\n  |> filter(fn: (r) => r._measurement == \"sen66\" and r._field == \"pm2_5\")\n  |> filter(fn: (r) => r.project == \"${project}\" and r.position == \"exhaust\")\n  |> aggregateWindow(every: 30s, fn: mean, createEmpty: false)\n  |> keep(columns: [\"_time\", \"_value\"])\n  |> rename(columns: {_value: \"exhaust\"})\n\njoin(tables: {i: intake, e: exhaust}, on: [\"_time\"])\n  |> map(fn: (r) => ({_time: r._time, _value: if r.intake > 0.0 then (r.intake - r.exhaust) / r.intake * 100.0 else float(v: 0)}))\n  |> last()"
+        }
+      ]
+    },
+
+    {
       "id": 700,
       "type": "row",
       "title": "Value table — per-device snapshot",
