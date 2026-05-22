@@ -1,0 +1,72 @@
+# fly.toml — InfluxDB for Savage
+#
+# ── First-time setup ──────────────────────────────────────────────────────────
+#
+#   cd services/influxdb
+#
+#   1. Create the fly app
+#      fly launch --name savage-influxdb --no-deploy
+#
+#   2. Create the persistent volume (once per region)
+#      fly volumes create influx_data --size 10 --region sjc
+#
+#   3. Set credentials as secrets (never committed to source)
+#      fly secrets set \
+#        DOCKER_INFLUXDB_INIT_USERNAME=admin \
+#        DOCKER_INFLUXDB_INIT_PASSWORD=$(openssl rand -base64 32) \
+#        DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=$(openssl rand -base64 48)
+#
+#   4. Deploy
+#      fly deploy
+#
+# ── Access from other services ────────────────────────────────────────────────
+#
+#   Reach InfluxDB over fly.io's private network (6PN) — no public exposure
+#   needed for Node-RED or Grafana:
+#
+#     http://savage-influxdb.internal:8086
+#
+#   The public HTTPS endpoint (savage-influxdb.fly.dev) is available for
+#   running `influx` CLI commands and the UI during development.
+#
+# ── Subsequent deploys ────────────────────────────────────────────────────────
+#   fly deploy   (from this directory)
+
+app = 'savage-influxdb'
+primary_region = 'sjc'
+
+[build]
+  image = 'influxdb:2.7'
+
+[env]
+  # One-time initialisation — ignored on subsequent starts once /data is
+  # populated. Non-secret values only; credentials go in `fly secrets set`.
+  DOCKER_INFLUXDB_INIT_MODE   = 'setup'
+  DOCKER_INFLUXDB_INIT_ORG    = 'savage'
+  DOCKER_INFLUXDB_INIT_BUCKET = 'timeseries'
+
+[http_service]
+  internal_port = 8086
+  force_https = true
+  auto_stop_machines = 'stop'
+  auto_start_machines = true
+  # Keep at least 1 running so Node-RED and Grafana can always write data.
+  min_machines_running = 1
+  processes = ['app']
+
+  [[http_service.checks]]
+    grace_period = '30s'
+    interval = '30s'
+    method = 'GET'
+    path = '/health'
+    timeout = '10s'
+
+[[vm]]
+  memory = '512mb'
+  cpu_kind = 'shared'
+  cpus = 1
+
+[[mounts]]
+  source = 'influx_data'
+  destination = '/var/lib/influxdb2'
+  initial_size = '10gb'

@@ -1,0 +1,68 @@
+# fly.toml — Grafana for Savage
+#
+# ── First-time setup ──────────────────────────────────────────────────────────
+#
+#   cd services/grafana
+#
+#   1. Create the fly app
+#      fly launch --name savage-grafana --no-deploy
+#
+#   2. Create the persistent volume (stores dashboards, plugins, sqlite DB)
+#      fly volumes create grafana_data --size 2 --region sjc
+#
+#   3. Set credentials as secrets
+#      fly secrets set \
+#        GF_SECURITY_ADMIN_USER=admin \
+#        GF_SECURITY_ADMIN_PASSWORD=$(openssl rand -base64 24) \
+#        INFLUX_TOKEN=<same token set for savage-influxdb> \
+#        INFLUX_ORG=savage \
+#        INFLUX_BUCKET=timeseries
+#
+#   4. Deploy
+#      fly deploy
+#
+# ── InfluxDB datasource ───────────────────────────────────────────────────────
+#
+#   The provisioning/datasources/influxdb.yaml uses ${INFLUX_URL} etc.
+#   Grafana reaches InfluxDB over fly.io's private network (6PN):
+#     INFLUX_URL = http://savage-influxdb.internal:8086
+#
+#   This is set in [env] below (not a secret since it's not sensitive).
+#
+# ── Subsequent deploys ────────────────────────────────────────────────────────
+#   fly deploy   (from this directory)
+
+app = 'savage-grafana'
+primary_region = 'sjc'
+
+[build]
+
+[env]
+  GF_SERVER_HTTP_PORT = '3000'
+  # InfluxDB over fly private network — not sensitive, so set here not as secret
+  INFLUX_URL = 'http://savage-influxdb.internal:8086'
+
+[http_service]
+  internal_port = 3000
+  force_https = true
+  auto_stop_machines = 'stop'
+  auto_start_machines = true
+  min_machines_running = 0
+  processes = ['app']
+
+  [[http_service.checks]]
+    grace_period = '20s'
+    interval = '30s'
+    method = 'GET'
+    path = '/api/health'
+    timeout = '10s'
+
+[[vm]]
+  memory = '256mb'
+  cpu_kind = 'shared'
+  cpus = 1
+
+[[mounts]]
+  source = 'grafana_data'
+  destination = '/var/lib/grafana'
+  initial_size = '2gb'

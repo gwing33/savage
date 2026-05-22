@@ -1,7 +1,7 @@
 # ─────────────────────────────────────────────────────────────────────────────
 # savage – Makefile
 # ─────────────────────────────────────────────────────────────────────────────
-.PHONY: dev clean rebuild logs ps shell-node-red shell-influxdb help
+.PHONY: dev clean rebuild logs ps shell-node-red shell-influxdb deploy help
 
 # ── Colours ──────────────────────────────────────────────────────────────────
 CYAN  := \033[0;36m
@@ -17,6 +17,8 @@ RESET := \033[0m
 INFLUX_TOKEN = $(shell grep -m1 '^INFLUX_TOKEN=' .env 2>/dev/null | cut -d= -f2 | tr -d '"')
 MQTT_USER    = $(shell grep -m1 '^MQTT_USER='    .env 2>/dev/null | cut -d= -f2 | tr -d '"')
 MQTT_PASS    = $(shell grep -m1 '^MQTT_PASS='    .env 2>/dev/null | cut -d= -f2 | tr -d '"')
+SURREAL_USER = $(shell grep -m1 '^SURREAL_USER=' .env 2>/dev/null | cut -d= -f2 | tr -d '"')
+SURREAL_PASS = $(shell grep -m1 '^SURREAL_PASS=' .env 2>/dev/null | cut -d= -f2 | tr -d '"')
 
 # ── dev ───────────────────────────────────────────────────────────────────────
 ## Start all services (builds images if needed). Seeds .env on first run.
@@ -33,6 +35,8 @@ dev:
 	 [ -z "$(INFLUX_TOKEN)" ] && MISSING="$$MISSING INFLUX_TOKEN"; \
 	 [ -z "$(MQTT_USER)" ]    && MISSING="$$MISSING MQTT_USER"; \
 	 [ -z "$(MQTT_PASS)" ]    && MISSING="$$MISSING MQTT_PASS"; \
+	 [ -z "$(SURREAL_USER)" ] && MISSING="$$MISSING SURREAL_USER"; \
+	 [ -z "$(SURREAL_PASS)" ] && MISSING="$$MISSING SURREAL_PASS"; \
 	 if [ -n "$$MISSING" ]; then \
 		echo ""; \
 		echo "ERROR: missing required values in .env:$$MISSING"; \
@@ -110,6 +114,9 @@ dev:
 	@echo "  Grafana    →  http://localhost:3000  (default: admin / admin)"
 	@echo "  InfluxDB   →  http://localhost:8086  (UI + API)"
 	@echo "  MQTT       →  localhost:1883  (WebSocket: localhost:9001)"
+	@echo "  Website    →  http://localhost:3001"
+	@echo "  SurrealDB  →  ws://localhost:8000"
+	@echo "  Dozzle     →  http://localhost:8080  (log viewer)"
 	@echo ""
 	@echo "  Run 'make logs' to tail all service logs."
 
@@ -124,6 +131,7 @@ clean:
 		services/grafana/data/* \
 		services/mosquitto/data/* \
 		services/mosquitto/log/* \
+		services/surrealdb/data/* \
 		services/mosquitto/config/passwd \
 		services/mosquitto/config/.creds-stash \
 		services/mosquitto/config/.dev-action
@@ -133,7 +141,8 @@ clean:
 		services/influxdb/data/.gitkeep \
 		services/grafana/data/.gitkeep \
 		services/mosquitto/data/.gitkeep \
-		services/mosquitto/log/.gitkeep
+		services/mosquitto/log/.gitkeep \
+		services/surrealdb/data/.gitkeep
 	@echo "$(CYAN)Clean complete.$(RESET)"
 
 # ── rebuild ───────────────────────────────────────────────────────────────────
@@ -160,6 +169,37 @@ shell-node-red:
 shell-influxdb:
 	docker compose exec influxdb influx
 
+# ── deploy ────────────────────────────────────────────────────────────────────
+## Deploy all services and the website to fly.io.
+## Prerequisites: `fly auth login` and first-time `fly launch` per service
+## (see the fly.toml in each service directory for full setup instructions).
+deploy:
+	@echo ""
+	@echo "$(CYAN)Deploying Savage to fly.io…$(RESET)"
+	@echo ""
+	@echo "$(CYAN)  [1/6] SurrealDB…$(RESET)"
+	cd services/surrealdb && fly deploy
+	@echo "$(CYAN)  [2/6] InfluxDB…$(RESET)"
+	cd services/influxdb  && fly deploy
+	@echo "$(CYAN)  [3/6] Mosquitto…$(RESET)"
+	cd services/mosquitto && fly deploy
+	@echo "$(CYAN)  [4/6] Node-RED…$(RESET)"
+	cd services/node-red  && fly deploy
+	@echo "$(CYAN)  [5/6] Grafana…$(RESET)"
+	cd services/grafana   && fly deploy
+	@echo "$(CYAN)  [6/6] Website…$(RESET)"
+	cd website            && fly deploy
+	@echo ""
+	@echo "$(CYAN)  All services deployed!$(RESET)"
+	@echo ""
+	@echo "  Node-RED   →  https://savage-node-red.fly.dev"
+	@echo "  Grafana    →  https://savage-grafana.fly.dev"
+	@echo "  InfluxDB   →  https://savage-influxdb.fly.dev"
+	@echo "  MQTT       →  savage-mosquitto.fly.dev:1883"
+	@echo "  Website    →  https://savage-website.fly.dev"
+	@echo "  SurrealDB  →  https://savage-surreal.fly.dev"
+	@echo ""
+
 # ── help ──────────────────────────────────────────────────────────────────────
 ## Print this help message.
 help:
@@ -173,5 +213,6 @@ help:
 	@echo "  ps               Show status of all savage containers"
 	@echo "  shell-node-red   Open a shell in the Node-RED container"
 	@echo "  shell-influxdb   Open the influx CLI in the InfluxDB container"
+	@echo "  deploy           Deploy all services to fly.io"
 	@echo "  help             Print this message"
 	@echo ""

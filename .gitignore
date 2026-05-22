@@ -19,6 +19,8 @@ services/influxdb/data/*
 !services/influxdb/data/.gitkeep
 services/grafana/data/*
 !services/grafana/data/.gitkeep
+services/surrealdb/data/*
+!services/surrealdb/data/.gitkeep
 services/mosquitto/data/*
 !services/mosquitto/data/.gitkeep
 services/mosquitto/log/*

@@ -1,0 +1,23 @@
+# Dependencies — reinstalled inside the image via npm ci
+node_modules
+
+# SQLite database files — live on the fly.io volume at runtime
+*.db
+*.db-wal
+*.db-shm
+
+# Secrets and local config
+.env
+.env.*
+
+# Version control
+.git
+.gitignore
+
+# Editor / OS artefacts
+.DS_Store
+*.swp
+*.swo
+
+# Docs (not needed at runtime)
+README.md

@@ -1,0 +1,74 @@
+# fly.toml — Node-RED for Savage
+#
+# ── First-time setup ──────────────────────────────────────────────────────────
+#
+#   cd services/node-red
+#
+#   1. Create the fly app
+#      fly launch --name savage-node-red --no-deploy
+#
+#   2. Create the persistent volume (once per region)
+#      fly volumes create node_red_data --size 1 --region sjc
+#
+#   3. Set secrets (never committed to source)
+#      fly secrets set \
+#        INFLUX_TOKEN=your-influx-token \
+#        INFLUX_ORG=savage \
+#        INFLUX_BUCKET=timeseries \
+#        NODE_RED_CREDENTIAL_SECRET=$(openssl rand -base64 32)
+#
+#   4. Deploy
+#      fly deploy
+#
+#   5. On first boot, Node-RED seeds flows.json from the image defaults onto
+#      the /data volume. Credentials for MQTT / InfluxDB nodes must be
+#      configured via the Node-RED UI at https://savage-node-red.fly.dev
+#
+# ── Security ──────────────────────────────────────────────────────────────────
+#
+#   The editor is public by default. Enable adminAuth in settings-fly.js:
+#     1. Generate a bcrypt hash:  npx node-red-admin hash-pw
+#     2. Uncomment and populate the adminAuth block in settings-fly.js
+#     3. Redeploy: fly deploy
+#
+# ── Subsequent deploys ────────────────────────────────────────────────────────
+#   fly deploy   (from this directory)
+
+app = 'savage-node-red'
+primary_region = 'sjc'
+
+[build]
+  dockerfile = 'Dockerfile.fly'
+
+[env]
+  PORT = '1880'
+  # InfluxDB reachable over fly.io private network (6PN)
+  INFLUX_URL = 'http://savage-influxdb.internal:8086'
+
+[http_service]
+  internal_port = 1880
+  force_https = true
+  auto_stop_machines = 'stop'
+  auto_start_machines = true
+  # Keep at least 1 running so MQTT flows aren't interrupted.
+  min_machines_running = 1
+  processes = ['app']
+
+  [[http_service.checks]]
+    grace_period = '20s'
+    interval = '30s'
+    method = 'GET'
+    path = '/'
+    timeout = '10s'
+
+[[vm]]
+  memory = '512mb'
+  cpu_kind = 'shared'
+  cpus = 1
+
+# Runtime state: context store, credential file, runtime node configs.
+# Flows are seeded from the image on first boot, then persisted here.
+[[mounts]]
+  source = 'node_red_data'
+  destination = '/data'
+  initial_size = '1gb'

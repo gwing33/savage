@@ -1,0 +1,34 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Node-RED – fly.io build
+#
+# Differences from the local Dockerfile:
+#   • No platform pin (fly.io runs amd64)
+#   • settings-fly.js is baked in at /usr/src/node-red/settings-fly.js
+#     (not mounted, so it always reflects what's in the repo)
+#   • flows/ are copied to /flows-default/ as the seed for first boot.
+#     On startup, docker-entrypoint.fly.sh copies them to /data/flows.json
+#     if the volume is empty, then Node-RED takes over from there.
+# ─────────────────────────────────────────────────────────────────────────────
+FROM nodered/node-red:latest
+
+USER root
+
+RUN npm install \
+    --unsafe-perm \
+    --no-update-notifier \
+    --no-fund \
+    --prefix /usr/src/node-red \
+    node-red-contrib-influxdb
+
+COPY settings-fly.js /usr/src/node-red/settings-fly.js
+COPY flows/           /flows-default/
+COPY docker-entrypoint.fly.sh /usr/local/bin/docker-entrypoint.fly.sh
+
+RUN chmod +x /usr/local/bin/docker-entrypoint.fly.sh \
+ && mkdir -p /data \
+ && chown -R node-red:node-red /data /flows-default \
+                               /usr/src/node-red/settings-fly.js
+
+USER node-red
+
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.fly.sh"]

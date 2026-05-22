@@ -113,6 +113,65 @@ services:
     networks:
       - savage-net
 
+  # ── SurrealDB ──────────────────────────────────────────────────────────────
+  surrealdb:
+    build: ./services/surrealdb
+    platform: linux/arm64
+    container_name: savage-surrealdb
+    restart: unless-stopped
+    environment:
+      SURREAL_USER: ${SURREAL_USER:?SURREAL_USER not set — see .env.example}
+      SURREAL_PASS: ${SURREAL_PASS:?SURREAL_PASS not set — see .env.example}
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./services/surrealdb/data:/data
+    networks:
+      - savage-net
+    healthcheck:
+      test: ["CMD", "/surreal", "is-ready"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+
+  # ── Savage Website ────────────────────────────────────────────────────────
+  savage-website:
+    build: ./website
+    platform: linux/arm64
+    container_name: savage-website
+    restart: unless-stopped
+    ports:
+      - "3001:8080" # Website (Grafana owns 3000)
+    environment:
+      PORT: "8080"
+      SURREAL_URL: ws://localhost:8000
+      SURREAL_USER: ${SURREAL_USER:?SURREAL_USER not set — see .env.example}
+      SURREAL_PASS: ${SURREAL_PASS:?SURREAL_PASS not set — see .env.example}
+      SURREAL_NS: savage
+      SURREAL_DB: main
+    volumes:
+      - ./website:/app
+      - /app/node_modules
+    depends_on:
+      surrealdb:
+        condition: service_healthy
+    command: sh -c "npm install && npm run dev"
+    networks:
+      - savage-net
+
+  # ── Dozzle (log viewer) ───────────────────────────────────────────────────
+  dozzle:
+    image: amir20/dozzle:latest
+    container_name: savage-dozzle
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    ports:
+      - "8080:8080"
+    networks:
+      - savage-net
+
   # ── Grafana ────────────────────────────────────────────────────────────────
   grafana:
     image: grafana/grafana:latest

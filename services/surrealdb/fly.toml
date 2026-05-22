@@ -1,0 +1,76 @@
+# fly.toml — SurrealDB for Savage
+#
+# ── First-time setup ──────────────────────────────────────────────────────────
+#
+#   cd savage/surrealdb
+#
+#   1. Create the fly app
+#      fly launch --name savage-surreal --no-deploy
+#
+#   2. Create the persistent volume (once per region)
+#      fly volumes create surreal_data --size 3 --region sjc
+#
+#   3. Set credentials as secrets (never committed to source)
+#      fly secrets set \
+#        SURREAL_USER=root \
+#        SURREAL_PASS=$(openssl rand -base64 32)
+#
+#   4. Deploy
+#      fly deploy
+#
+# ── Connect the website ───────────────────────────────────────────────────────
+#
+#   The website reaches SurrealDB over fly.io's private WireGuard network
+#   (6PN). No public exposure needed. From savage/website:
+#
+#      fly secrets set \
+#        SURREAL_URL=ws://savage-surreal.internal:8000 \
+#        SURREAL_USER=<same value set above> \
+#        SURREAL_PASS=<same value set above> \
+#        SURREAL_NS=savage \
+#        SURREAL_DB=main
+#
+#      fly deploy
+#
+# ── Subsequent deploys ────────────────────────────────────────────────────────
+#   fly deploy   (from this directory)
+
+app = 'savage-surreal'
+primary_region = 'sjc'
+
+[build]
+
+[env]
+  # Non-secret configuration. Credentials must be set via `fly secrets set`.
+  SURREAL_LOG = 'info'
+
+# Expose port 8000 so fly.io can manage the machine and run health checks.
+# The website connects over the private network (appname.internal), not via
+# this public-facing service — but fly needs the service block to keep the
+# machine alive and perform health checks.
+[http_service]
+  internal_port = 8000
+  force_https = true
+  auto_stop_machines = 'stop'
+  auto_start_machines = true
+  # Never drop to zero — the website can't wake up a stopped DB via private
+  # networking (only the fly proxy can do that). Keep at least 1 always up.
+  min_machines_running = 1
+  processes = ['app']
+
+  [[http_service.checks]]
+    grace_period = '15s'
+    interval = '30s'
+    method = 'GET'
+    path = '/health'
+    timeout = '10s'
+
+[[vm]]
+  memory = '512mb'
+  cpu_kind = 'shared'
+  cpus = 1
+
+[[mounts]]
+  source = 'surreal_data'
+  destination = '/data'
+  initial_size = '3gb'
