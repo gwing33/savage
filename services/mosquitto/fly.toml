@@ -1,70 +1,32 @@
-# fly.toml — Mosquitto MQTT Broker for Savage
+# fly.toml app configuration file generated for savage-mosquitto on 2026-05-21T20:56:14-07:00
 #
-# ── First-time setup ──────────────────────────────────────────────────────────
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
 #
-#   cd services/mosquitto
-#
-#   1. Create the fly app
-#      fly launch --name savage-mosquitto --no-deploy
-#
-#   2. Create the persistent volume for MQTT session data
-#      fly volumes create mosquitto_data --size 1 --region sjc
-#
-#   3. Set MQTT credentials as secrets
-#      fly secrets set \
-#        MQTT_USER=your-mqtt-user \
-#        MQTT_PASS=$(openssl rand -base64 24)
-#
-#   4. Deploy
-#      fly deploy
-#
-# ── Connecting IoT devices ────────────────────────────────────────────────────
-#
-#   MQTT (plain TCP):  savage-mosquitto.fly.dev:1883
-#   MQTT over WS:      wss://savage-mosquitto.fly.dev:443  (path: /)
-#
-#   Note: fly.io terminates TLS at the edge for the WebSocket port.
-#   For plain TCP port 1883, traffic is proxied as-is (no TLS).
-#   To encrypt MQTT traffic, configure your clients to use port 8883 and
-#   add a TLS [[services]] block, or use the WebSocket endpoint instead.
-#
-# ── Connecting Node-RED ───────────────────────────────────────────────────────
-#
-#   On fly, Node-RED can reach Mosquitto over the private network:
-#     mqtt://savage-mosquitto.internal:1883
-#
-# ── Subsequent deploys ────────────────────────────────────────────────────────
-#   fly deploy   (from this directory)
 
 app = 'savage-mosquitto'
 primary_region = 'sjc'
 
 [build]
 
-# ── MQTT over plain TCP (port 1883) ───────────────────────────────────────────
-# IoT devices and Node-RED connect here. fly.io proxies TCP directly.
+[[mounts]]
+  source = 'mosquitto_data'
+  destination = '/mosquitto/data'
+  initial_size = '1gb'
+
 [[services]]
-  internal_port = 1883
   protocol = 'tcp'
+  internal_port = 1883
   auto_stop_machines = 'stop'
   auto_start_machines = true
-  # Keep alive so IoT devices don't lose connection.
   min_machines_running = 1
   processes = ['app']
 
   [[services.ports]]
     port = 1883
 
-  [[services.tcp_checks]]
-    grace_period = '15s'
-    interval = '30s'
-    timeout = '10s'
-    restart_limit = 0
-
-# ── MQTT over WebSocket (port 9001 → proxied via fly HTTPS on 443) ────────────
 [[services]]
-  internal_port = 9001
   protocol = 'tcp'
+  internal_port = 9001
   auto_stop_machines = 'stop'
   auto_start_machines = true
   min_machines_running = 1
@@ -72,21 +34,14 @@ primary_region = 'sjc'
 
   [[services.ports]]
     port = 443
-    handlers = ['tls', 'http']
+    handlers = ['tls']
 
-  [[services.http_checks]]
-    grace_period = '15s'
+  [[services.tcp_checks]]
     interval = '30s'
-    method = 'GET'
-    path = '/'
     timeout = '10s'
+    grace_period = '15s'
 
 [[vm]]
   memory = '256mb'
-  cpu_kind = 'shared'
   cpus = 1
-
-[[mounts]]
-  source = 'mosquitto_data'
-  destination = '/mosquitto/data'
-  initial_size = '1gb'
+  memory_mb = 256

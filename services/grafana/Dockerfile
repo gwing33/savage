@@ -1,15 +1,20 @@
 # ─────────────────────────────────────────────────────────────────────────────
 # Grafana — fly.io build
 #
-# Bakes the provisioning directory (datasources + dashboards) into the image
-# so that InfluxDB is auto-configured on startup. Credentials are injected at
-# runtime via `fly secrets set`.
+# Runs as root so the container can write to the fly volume (/var/lib/grafana),
+# which is root-owned on first mount. No custom entrypoint needed — the
+# parent image's /run.sh works fine as root.
 #
-# The /var/lib/grafana volume (dashboards, plugins, sqlite DB) is managed by
-# a fly volume mount so it persists across deploys.
+# Server binding (0.0.0.0:3000) and paths are set explicitly in grafana.ini
+# rather than relying on GF_SERVER_* env var parsing, which is fragile across
+# Grafana image versions.
 # ─────────────────────────────────────────────────────────────────────────────
 FROM grafana/grafana:latest
 
-COPY provisioning /etc/grafana/provisioning
+USER root
 
-EXPOSE 3000
+# Ensure log directory exists (not part of the fly volume).
+RUN mkdir -p /var/log/grafana
+
+COPY grafana.ini      /etc/grafana/grafana.ini
+COPY provisioning     /etc/grafana/provisioning
