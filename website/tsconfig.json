@@ -9,6 +9,7 @@
     "jsx": "react-jsx",
     "jsxImportSource": "remix/ui",
     "strict": true,
-    "noEmit": true
-  }
+    "noEmit": true,
+    "types": ["node"],
+  },
 }

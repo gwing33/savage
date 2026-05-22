@@ -1,9 +1,15 @@
 import { createHtmlResponse } from "remix/response/html";
 import { renderToString } from "remix/ui/server";
+import { db } from "../db.ts";
+import { getSessionToken } from "../auth.ts";
 import { HomePage } from "../home.tsx";
 
 export default async function homeController(context: any) {
   let success = context.url.searchParams.get("success") === "true";
-  let html = await renderToString(<HomePage success={success} />);
+
+  const token = getSessionToken(context.request);
+  const user = token ? await db.getSessionUser(token).catch(() => null) : null;
+
+  let html = await renderToString(<HomePage success={success} user={user} />);
   return createHtmlResponse(html);
 }

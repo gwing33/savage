@@ -135,6 +135,17 @@ services:
       retries: 12
       start_period: 10s
 
+  # ── Mailpit (dev email trap) ──────────────────────────────────────────────
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: savage-mailpit
+    restart: unless-stopped
+    ports:
+      - "8025:8025" # Web UI — browse caught emails at http://localhost:8025
+      - "1025:1025" # SMTP — website container sends to this port
+    networks:
+      - savage-net
+
   # ── Savage Website ────────────────────────────────────────────────────────
   savage-website:
     build: ./website
@@ -150,12 +161,21 @@ services:
       SURREAL_PASS: ${SURREAL_PASS:?SURREAL_PASS not set — see .env.example}
       SURREAL_NS: savage
       SURREAL_DB: main
+      # ── Email (dev) ──────────────────────────────────────────────────────
+      # Mailpit catches everything — no real emails leave the machine.
+      # In production set RESEND_API_KEY (+ optionally EMAIL_FROM) instead.
+      SMTP_HOST: mailpit
+      SMTP_PORT: "1025"
+      EMAIL_FROM: "Savage <noreply@savage.local>"
+      # RESEND_API_KEY: "re_..."
     volumes:
       - ./website:/app
       - /app/node_modules
     depends_on:
       surrealdb:
         condition: service_healthy
+      mailpit:
+        condition: service_started
     command: sh -c "npm install && npm run dev"
     networks:
       - savage-net

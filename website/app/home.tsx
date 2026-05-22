@@ -405,7 +405,10 @@ const footerTextStyles = css({
 // ─── Components ──────────────────────────────────────────────────────────────
 // All remix/ui custom components must receive a Handle and return a render fn.
 
-function Nav(_handle: Handle): () => RemixNode {
+function Nav(
+  handle: Handle<{ user?: { email: string; type: string } | null }>,
+): () => RemixNode {
+  const user = handle.props.user;
   return () => (
     <nav mix={navStyles}>
       <a href="/" mix={navLogoStyles}>
@@ -423,9 +426,20 @@ function Nav(_handle: Handle): () => RemixNode {
           </a>
         </li>
         <li>
-          <a href="#contact" mix={navCtaStyles}>
+          <a href="#contact" mix={navLinkStyles}>
             Get Early Access
           </a>
+        </li>
+        <li>
+          {user ? (
+            <a href="/dashboard" mix={navCtaStyles}>
+              Dashboard
+            </a>
+          ) : (
+            <a href="/login" mix={navCtaStyles}>
+              Log in
+            </a>
+          )}
         </li>
       </ul>
     </nav>
@@ -675,6 +689,7 @@ function Footer(_handle: Handle): () => RemixNode {
 export interface HomePageProps {
   success?: boolean;
   error?: string;
+  user?: { email: string; type: string } | null;
 }
 
 export function HomePage(handle: Handle<HomePageProps>): () => RemixNode {
@@ -700,7 +715,7 @@ export function HomePage(handle: Handle<HomePageProps>): () => RemixNode {
         `}</style>
       </head>
       <body mix={bodyStyles}>
-        <Nav />
+        <Nav user={handle.props.user} />
         <main>
           <Hero />
           <Features />

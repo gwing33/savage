@@ -10,7 +10,12 @@
     "dev": "node --env-file-if-exists=../.env --watch --import remix/node-tsx server.tsx"
   },
   "dependencies": {
+    "nodemailer": "^6.9.16",
     "remix": "3.0.0-beta.1",
     "surrealdb": "^2.0.3"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "@types/nodemailer": "^6.4.17"
   }
 }

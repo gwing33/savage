@@ -116,6 +116,7 @@ dev:
 	@echo "  MQTT       →  localhost:1883  (WebSocket: localhost:9001)"
 	@echo "  Website    →  http://localhost:3001"
 	@echo "  SurrealDB  →  ws://localhost:8000"
+	@echo "  Mailpit    →  http://localhost:8025  (caught emails — dev only)"
 	@echo "  Dozzle     →  http://localhost:8080  (log viewer)"
 	@echo ""
 	@echo "  Run 'make logs' to tail all service logs."
