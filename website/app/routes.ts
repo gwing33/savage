@@ -7,4 +7,5 @@ export const routes = route({
   loginVerify: form("login/verify"),
   logout: form("logout"),
   dashboard: "/dashboard",
+  filterCutList: "/filter-cut-list",
 });
