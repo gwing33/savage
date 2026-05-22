@@ -15,6 +15,15 @@
 # ─────────────────────────────────────────────────────────────────────────────
 set -e
 
+# ── Require auth secrets ────────────────────────────────────────────────────
+# Both must be set via `fly secrets set` before deploying.
+if [ -z "${NODE_RED_ADMIN_USER}" ] || [ -z "${NODE_RED_ADMIN_PASS}" ]; then
+    echo "[savage] ERROR: NODE_RED_ADMIN_USER and NODE_RED_ADMIN_PASS must be set as fly secrets."
+    echo "[savage]   fly secrets set NODE_RED_ADMIN_USER=admin"
+    echo "[savage]   fly secrets set NODE_RED_ADMIN_PASS=\"\$(npx node-red-admin hash-pw)\""
+    exit 1
+fi
+
 if [ ! -f /data/flows.json ]; then
     echo "[savage] First boot — seeding flows from image defaults..."
     if [ -f /flows-default/flows.json ]; then

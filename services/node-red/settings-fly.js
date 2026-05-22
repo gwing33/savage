@@ -42,35 +42,36 @@ module.exports = {
   },
 
   // ── Security ───────────────────────────────────────────────────────────
-  // Uncomment to protect the editor on the public fly.io URL.
-  // Generate a bcrypt hash with:  npx node-red-admin hash-pw
-  // Then set NODE_RED_ADMIN_PASS as a fly secret and reference it here, or
-  // just paste the hash directly (it is not a plaintext password).
+  // Username and bcrypt-hashed password are injected via fly secrets:
+  //   fly secrets set NODE_RED_ADMIN_USER=admin
+  //   fly secrets set NODE_RED_ADMIN_PASS="$(npx node-red-admin hash-pw)"
   //
-  // adminAuth: {
-  //   type: "credentials",
-  //   users: [
-  //     {
-  //       username: "admin",
-  //       password: "$2b$08$<bcrypt-hash>",
-  //       permissions: "*",
-  //     },
-  //   ],
-  // },
+  // If either secret is missing the app will refuse to start rather than
+  // silently boot with an open editor.
+  adminAuth: {
+    type: "credentials",
+    users: [
+      {
+        username: process.env.NODE_RED_ADMIN_USER,
+        password: process.env.NODE_RED_ADMIN_PASS,
+        permissions: "*",
+      },
+    ],
+  },
 
   // ── Context storage ────────────────────────────────────────────────────
   contextStorage: {
     default: { module: "memory" },
-    file:    { module: "localfilesystem" },
+    file: { module: "localfilesystem" },
   },
 
   // ── Function node globals ──────────────────────────────────────────────
   // Accessible inside any Function node via:  global.get('influxdb')
   functionGlobalContext: {
     influxdb: {
-      url:    process.env.INFLUX_URL    || "http://savage-influxdb.internal:8086",
-      token:  process.env.INFLUX_TOKEN  || "",
-      org:    process.env.INFLUX_ORG    || "savage",
+      url: process.env.INFLUX_URL || "http://savage-influxdb.internal:8086",
+      token: process.env.INFLUX_TOKEN || "",
+      org: process.env.INFLUX_ORG || "savage",
       bucket: process.env.INFLUX_BUCKET || "timeseries",
     },
   },
