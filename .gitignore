@@ -1,6 +1,10 @@
 # macOS-specific files
 .DS_Store
 
+# iCloud Drive duplicate artifacts (e.g. "file 2", "file 3")
+* [0-9]
+* [0-9][0-9]
+
 # ── Secrets ──────────────────────────────────────────────────────────────────
 # .env.example is committed; the real .env is not
 .env
