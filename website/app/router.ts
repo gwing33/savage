@@ -8,6 +8,8 @@ import loginVerifyController from "./actions/login/verify/controller.tsx";
 import logoutController from "./actions/logout/controller.tsx";
 import dashboardController from "./actions/dashboard/controller.tsx";
 import filterCutListController from "./actions/filter-cut-list/controller.tsx";
+import fanBoxController from "./actions/fan-box/controller.tsx";
+import fanBoxDrawingsController from "./actions/fan-box-drawings/controller.tsx";
 
 export function createWebsiteRouter() {
   let router = createRouter({
@@ -21,6 +23,8 @@ export function createWebsiteRouter() {
   router.map(routes.logout, logoutController);
   router.get(routes.dashboard, dashboardController);
   router.get(routes.filterCutList, filterCutListController);
+  router.get(routes.fanBox, fanBoxController);
+  router.get(routes.fanBoxDrawings, fanBoxDrawingsController);
 
   return router;
 }

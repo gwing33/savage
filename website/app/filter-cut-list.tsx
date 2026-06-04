@@ -347,7 +347,7 @@ export interface FilterCutListPageProps {
 
 function buildDownloadUrl(svg: string): string {
   // Base64-encode the SVG for a data URI download link.
-  const b64 = Buffer.from(svg).toString("base64");
+  const b64 = btoa(unescape(encodeURIComponent(svg)));
   return `data:image/svg+xml;base64,${b64}`;
 }
 
@@ -526,13 +526,34 @@ export function FilterCutListPage(
                     {fanColumns} × {fanRows} grid — {fanCount} fan
                     {fanCount !== 1 ? "s" : ""}
                   </h2>
-                  <a
-                    href={downloadHref}
-                    download="filter-cut-list.svg"
-                    mix={downloadLinkStyles}
-                  >
-                    ↓ Download SVG
-                  </a>
+                  <div style="display:flex;gap:16px;align-items:center">
+                    <a
+                      href={downloadHref}
+                      download="filter-cut-list.svg"
+                      mix={downloadLinkStyles}
+                    >
+                      ↓ Download SVG
+                    </a>
+                    <a
+                      href={
+                        "/fan-box?fanSize=" +
+                        fanSize +
+                        "&fanSpacing=" +
+                        fanSpacing +
+                        "&fanRows=" +
+                        fanRows +
+                        "&fanColumns=" +
+                        fanColumns +
+                        "&fanPaddingX=" +
+                        fanPaddingX +
+                        "&fanPaddingY=" +
+                        fanPaddingY
+                      }
+                      mix={downloadLinkStyles}
+                    >
+                      → 3D Model
+                    </a>
+                  </div>
                 </div>
 
                 <div mix={statsRowStyles}>

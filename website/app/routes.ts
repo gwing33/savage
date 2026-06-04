@@ -8,4 +8,6 @@ export const routes = route({
   logout: form("logout"),
   dashboard: "/dashboard",
   filterCutList: "/filter-cut-list",
+  fanBox: "/fan-box",
+  fanBoxDrawings: "/fan-box-drawings",
 });
